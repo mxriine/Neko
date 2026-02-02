@@ -1,0 +1,53 @@
+services:
+  # Base de données PostgreSQL
+  postgres:
+    image: postgres:16-alpine
+    container_name: neko-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${DB_USER:-neko}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-nekopassword}
+      POSTGRES_DB: ${DB_NAME:-neko_db}
+    ports:
+      - "${DB_PORT:-5433}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - neko-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-neko}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Bot Discord Neko
+  bot:
+    build:
+      context: ../..
+      dockerfile: config/docker/Dockerfile
+    container_name: neko-bot
+    restart: unless-stopped
+    env_file:
+      - ../../.env
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgresql://${DB_USER:-neko}:${DB_PASSWORD:-nekopassword}@postgres:5432/${DB_NAME:-neko_db}?schema=public
+    volumes:
+      - ../../src:/app/src
+      - ../../config:/app/config
+      - ../../main.js:/app/main.js
+      - ../../logs:/app/logs
+    networks:
+      - neko-network
+    command: sh -c "npx prisma migrate deploy --schema=./config/prisma/schema.prisma > /dev/null 2>&1 && npm run dev"
+
+volumes:
+  postgres_data:
+    driver: local
+
+networks:
+  neko-network:
+    driver: bridge

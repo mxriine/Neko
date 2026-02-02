@@ -1,0 +1,14 @@
+{
+  "watch": [
+    "src",
+    "config",
+    "main.js"
+  ],
+  "ext": "js,json",
+  "ignore": [
+    "node_modules",
+    "logs",
+    "*.log"
+  ],
+  "exec": "node main.js"
+}
