@@ -16,7 +16,7 @@ module.exports = {
   // ————————————————————————————————————————
   // PREFIX VERSION
   // ————————————————————————————————————————
-  run: async (client, message) => {
+  run: async (message, client) => {
     const tempMsg = await message.channel.send(
       "On essaie de pong. . . un instant *!*"
     );

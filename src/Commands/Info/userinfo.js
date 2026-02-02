@@ -26,7 +26,7 @@ module.exports = {
   // ————————————————————————————————————————
   // PREFIX VERSION
   // ————————————————————————————————————————
-  run: async (client, message, args) => {
+  run: async (message, client, args) => {
     const member =
       message.mentions.members.first() ||
       message.guild.members.cache.get(args[0]) ||

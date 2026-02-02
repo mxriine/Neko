@@ -1,68 +1,139 @@
 const {
+  ApplicationCommandOptionType,
   PermissionFlagsBits,
-  EmbedBuilder,
+  MessageFlags,
   SlashCommandBuilder,
 } = require("discord.js");
+const dayjs = require("dayjs");
+
+// ——————————————————————————————
+// TYPE DE MAILS / RÔLES (depuis .env)
+// ——————————————————————————————
+const ANNOUNCE_TYPES = {
+  mail: process.env.MAIL_ROLE_ID,
+  recrutement: process.env.RECRUIT_ROLE_ID,
+  giveaways: process.env.GIVEAWAYS_ROLE_ID,
+  partenship: process.env.PATERNSHIP_ROLE_ID,
+  animation: process.env.ANIM_ROLE_ID,
+  poll: process.env.POLL_ROLE_ID,
+};
 
 module.exports = {
   name: "announce",
   category: "info",
-  permissions: PermissionFlagsBits.Administrator,
+  permissions: PermissionFlagsBits.KickMembers,
   ownerOnly: false,
-  usage: "announce <message>",
-  examples: ["announce Serveur en maintenance"],
-  description: "Envoie une annonce dans le salon",
+  usage: "announce <type> <message>",
+  examples: ["announce mail Coucou à tous", "announce recrutement On recrute !"],
+  description: "Envoie une annonce dans le salon configuré",
 
   data: new SlashCommandBuilder()
     .setName("announce")
-    .setDescription("Envoie une annonce dans le salon")
+    .setDescription("Envoie une annonce dans le salon configuré")
+    .addStringOption(option =>
+      option.setName("type")
+        .setDescription("Type d'annonce")
+        .setRequired(true)
+        .addChoices(
+          ...Object.keys(ANNOUNCE_TYPES).map(t => ({
+            name: t.toUpperCase(),
+            value: t,
+          }))
+        )
+    )
     .addStringOption(option =>
       option.setName("message")
-        .setDescription("Le message de l'annonce")
+        .setDescription("Contenu de l'annonce")
         .setRequired(true)
     ),
 
   // ————————————————————————————————————————
   // PREFIX VERSION
   // ————————————————————————————————————————
-  run: async (client, message, args) => {
-    if (!args.length) {
-      return message.reply("Vous devez fournir un message d'annonce.");
+  run: async (message, client, args) => {
+    const type = args[0]?.toLowerCase();
+    const content = args.slice(1).join(" ");
+
+    if (!type || !content) {
+      return message.reply("Usage : `announce <type> <message>`");
     }
 
-    const content = args.join(" ");
+    if (!ANNOUNCE_TYPES[type]) {
+      return message.reply(
+        "Type invalide. Types possibles : " +
+          Object.keys(ANNOUNCE_TYPES).join(", ")
+      );
+    }
 
-    const embed = new EmbedBuilder()
-      .setColor(0x5865f2)
-      .setTitle("📢 Annonce")
-      .setDescription(content)
-      .setTimestamp()
-      .setFooter({
-        text: `Par ${message.author.tag}`,
-        iconURL: message.author.displayAvatarURL({ dynamic: true }),
-      });
+    // Récupération du salon configuré dans la DB
+    const announceChannelID = guildSettings?.announcesChannel;
+    if (!announceChannelID) {
+      return message.reply(
+        "Aucun salon configuré pour les annonces. Utilisez `/setup announces #salon`"
+      );
+    }
 
-    await message.delete().catch(() => {});
-    return message.channel.send({ embeds: [embed] });
+    const announceChannel = client.channels.cache.get(announceChannelID);
+    if (!announceChannel) {
+      return message.reply("Salon d'annonce introuvable.");
+    }
+
+    const date = dayjs().format("DD/MM/YY");
+    const roleId = ANNOUNCE_TYPES[type];
+    const TYPE = type.toUpperCase();
+
+    await announceChannel.send({
+      content: `⸝⸝・₊ **${TYPE}** ! . . . \`${date}\` ・ ping <@&${roleId}> ;;\n${content}`
+    });
+
+    return message.reply("Votre annonce a été envoyée !");
   },
 
   // ————————————————————————————————————————
   // SLASH VERSION
   // ————————————————————————————————————————
   runSlash: async (client, interaction) => {
+    const type = interaction.options.getString("type");
     const content = interaction.options.getString("message");
 
-    const embed = new EmbedBuilder()
-      .setColor(0x5865f2)
-      .setTitle("📢 Annonce")
-      .setDescription(content)
-      .setTimestamp()
-      .setFooter({
-        text: `Par ${interaction.user.tag}`,
-        iconURL: interaction.user.displayAvatarURL({ dynamic: true }),
-      });
+    // Récupérer les settings de la guilde
+    const guildSettings = await client.getGuild(interaction.guild.id, interaction.guild.name);
 
-    await interaction.reply({ content: "Annonce envoyée !", ephemeral: true });
-    return interaction.channel.send({ embeds: [embed] });
+    if (!ANNOUNCE_TYPES[type]) {
+      return interaction.reply({
+        content: "Type invalide.",
+        flags: MessageFlags.Ephemeral,
+      });
+    }
+
+    // Récupération du salon configuré dans la DB
+    const announceChannelID = guildSettings?.announcesChannel;
+    if (!announceChannelID) {
+      return interaction.reply({
+        content: "Aucun salon configuré pour les annonces. Utilisez `/setup announces #salon`",
+        flags: MessageFlags.Ephemeral,
+      });
+    }
+
+    const announceChannel = client.channels.cache.get(announceChannelID);
+    if (!announceChannel) {
+      return interaction.reply({
+        content: "Salon d'annonce introuvable.",
+        flags: MessageFlags.Ephemeral,
+      });
+    }
+
+    const date = dayjs().format("DD/MM/YY");
+    const roleId = ANNOUNCE_TYPES[type];
+    const TYPE = type.toUpperCase();
+
+    await announceChannel.send({
+      content: `⸝⸝・₊ **${TYPE}** ! . . . \`${date}\` ・ ping <@&${roleId}> ;;\n${content}`
+    });
+
+    return interaction.reply({
+      content: "L'annonce a été envoyée !",
+      flags: MessageFlags.Ephemeral,
+    });
   },
 };

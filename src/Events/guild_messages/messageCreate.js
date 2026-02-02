@@ -1,11 +1,79 @@
 const Logger = require("../../Loaders/Logger");
 
+// Cooldown pour l'XP (1 minute par utilisateur)
+const xpCooldowns = new Map();
+
 module.exports = {
     name: "messageCreate",
     once: false,
     async execute(message, client) {
-        // Ignorer bots et DM
-        if (!message.guild || message.author.bot) return;
+        // Vérifications initiales
+        if (!message || !message.guild || !message.author || message.author.bot) {
+            return;
+        }
+
+        // Système d'XP automatique
+        try {
+            const guildSettings = await client.getGuild(message.guild.id, message.guild.name);
+            console.log('[XP] levelEnabled:', guildSettings?.levelEnabled);
+            
+            if (guildSettings && guildSettings.levelEnabled) {
+                const userSettings = await client.getUser(message.author.id, message.author.tag, message.guild.id);
+                console.log('[XP] UserSettings:', userSettings ? 'OK' : 'NULL');
+                
+                if (userSettings) {
+                    const userId = message.author.id;
+                    const now = Date.now();
+                    const cooldownAmount = 60 * 1000; // 1 minute
+
+                    const lastXp = xpCooldowns.get(userId);
+                    const timeSinceLastXp = lastXp ? now - lastXp : cooldownAmount;
+                    console.log('[XP] Cooldown:', Math.floor(timeSinceLastXp / 1000), 'secondes écoulées');
+
+                    if (!xpCooldowns.has(userId) || now - xpCooldowns.get(userId) >= cooldownAmount) {
+                        xpCooldowns.set(userId, now);
+
+                        // Ajouter entre 15 et 25 XP aléatoire
+                        const xpGained = Math.floor(Math.random() * 11) + 15;
+                        const newXp = userSettings.xp + xpGained;
+                        const oldLevel = userSettings.level;
+                        const newLevel = Math.floor(newXp / 100);
+
+                        console.log(`[XP] ${message.author.tag} gagne ${xpGained} XP (${userSettings.xp} → ${newXp})`);
+
+                        // Mettre à jour la base de données
+                        const updated = await client.prisma.user.update({
+                            where: {
+                                discordId_guildId: {
+                                    discordId: userId,
+                                    guildId: message.guild.id
+                                }
+                            },
+                            data: {
+                                xp: newXp,
+                                level: newLevel
+                            }
+                        });
+                        
+                        console.log('[XP] Update DB réussi:', updated.xp, 'XP');
+
+                        // Notification de level up
+                        if (newLevel > oldLevel && guildSettings.levelChannel) {
+                            console.log(`[XP] Level UP ! ${oldLevel} → ${newLevel}`);
+                            const levelChannel = message.guild.channels.cache.get(guildSettings.levelChannel);
+                            if (levelChannel) {
+                                levelChannel.send({
+                                    content: `🎉 ${message.author} vient de passer au niveau **${newLevel}** !`
+                                }).catch(() => {});
+                            }
+                        }
+                    }
+                }
+            }
+        } catch (error) {
+            console.error('[XP] Erreur:', error.message);
+            console.error('[XP] Stack:', error.stack);
+        }
 
         const prefix = process.env.PREFIX || "!";
         if (!message.content.startsWith(prefix)) return;
@@ -21,10 +89,6 @@ module.exports = {
         if (!command) return;
         if (!command.run && !command.execute) return;
 
-        // Récupérer les settings DB
-        let guildSettings = await client.getGuild(message.guild.id, message.guild.name);
-        let userSettings = await client.getUser(message.author.id, message.author.tag, message.guild.id);
-
         // Check owner
         if (command.ownerOnly && message.author.id !== process.env.OWNER_ID) {
             return message.reply("Seul le propriétaire du bot peut utiliser cette commande.");
@@ -38,9 +102,9 @@ module.exports = {
         // Exécution
         try {
             if (typeof command.run === "function") {
-                await command.run(client, message, args, guildSettings, userSettings);
+                await command.run(message, client, args);
             } else if (typeof command.execute === "function") {
-                await command.execute(client, message, args, guildSettings, userSettings);
+                await command.execute(message, client, args);
             }
         } catch (err) {
             Logger.error(`Erreur dans la commande prefix ${commandName}: ${err.message}`);

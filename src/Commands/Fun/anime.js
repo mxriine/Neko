@@ -45,7 +45,7 @@ module.exports = {
   // ————————————————————————————————————————
   // PREFIX VERSION
   // ————————————————————————————————————————
-  run: async (client, message, args) => {
+  run: async (message, client, args) => {
     const action = args[0];
     const user = message.mentions.users.first() || null;
 

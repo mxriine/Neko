@@ -27,7 +27,7 @@ module.exports = {
   // ————————————————————————————————————————
   // PREFIX VERSION
   // ————————————————————————————————————————
-  run: async (client, message, args) => {
+  run: async (message, client, args) => {
     if (args.length < 2) {
       return message.reply(
         "Vous devez saisir **au moins deux arguments différents** *!*"

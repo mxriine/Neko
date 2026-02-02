@@ -25,7 +25,7 @@ module.exports = {
   // ————————————————————————————————————————
   // PREFIX VERSION
   // ————————————————————————————————————————
-  run: async (client, message, args) => {
+  run: async (message, client, args) => {
     if (!args.length) {
       return message.reply(
         "Vous devez préciser un message à répéter *!*"
