@@ -1,5 +1,6 @@
-const { SlashCommandBuilder, EmbedBuilder, PermissionFlagsBits } = require('discord.js');
+const { SlashCommandBuilder, EmbedBuilder, PermissionFlagsBits, MessageFlags } = require('discord.js');
 const config = require('../../../config/bot.config');
+const { sendToChannelOrForum } = require('../../Assets/Functions/channelHelper');
 
 module.exports = {
     data: new SlashCommandBuilder()
@@ -31,6 +32,8 @@ module.exports = {
     category: 'Moderation',
 
     async execute(client, interaction) {
+        await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+
         const target = interaction.options.getUser('membre');
         const reason = interaction.options.getString('raison') || 'Aucune raison spécifiée';
         const deleteMessageDays = interaction.options.getInteger('supprimer_messages') || 0;
@@ -40,14 +43,14 @@ module.exports = {
         if (target.id === interaction.user.id) {
             return interaction.reply({
                 content: '❌ Vous ne pouvez pas vous bannir vous-même !',
-                ephemeral: true
+                flags: MessageFlags.Ephemeral
             });
         }
 
         if (target.bot) {
             return interaction.reply({
                 content: '❌ Vous ne pouvez pas bannir un bot !',
-                ephemeral: true
+                flags: MessageFlags.Ephemeral
             });
         }
 
@@ -55,14 +58,14 @@ module.exports = {
             if (!member.bannable) {
                 return interaction.reply({
                     content: '❌ Je ne peux pas bannir ce membre (rôle supérieur ou permissions insuffisantes).',
-                    ephemeral: true
+                    flags: MessageFlags.Ephemeral
                 });
             }
 
             if (member.roles.highest.position >= interaction.member.roles.highest.position) {
                 return interaction.reply({
                     content: '❌ Vous ne pouvez pas bannir ce membre (rôle supérieur ou égal).',
-                    ephemeral: true
+                    flags: MessageFlags.Ephemeral
                 });
             }
         }
@@ -90,6 +93,31 @@ module.exports = {
                 deleteMessageSeconds: deleteMessageDays * 24 * 60 * 60
             });
 
+            // Enregistrer le ban dans la BDD
+            await client.prisma.user.upsert({
+                where: {
+                    discordId_guildId: {
+                        discordId: target.id,
+                        guildId: interaction.guild.id
+                    }
+                },
+                update: {
+                    isBanned: true,
+                    bannedAt: new Date(),
+                    banReason: reason,
+                    inGuild: false
+                },
+                create: {
+                    discordId: target.id,
+                    username: target.username,
+                    guildId: interaction.guild.id,
+                    isBanned: true,
+                    bannedAt: new Date(),
+                    banReason: reason,
+                    inGuild: false
+                }
+            });
+
             // Embed de confirmation
             const embed = new EmbedBuilder()
                 .setColor(config.colors.error)
@@ -111,7 +139,7 @@ module.exports = {
                 });
             }
 
-            await interaction.reply({ embeds: [embed] });
+            await interaction.editReply({ embeds: [embed] });
 
             // Log
             const guildData = await client.getGuild(interaction.guild.id, interaction.guild.name);
@@ -137,16 +165,23 @@ module.exports = {
                         });
                     }
 
-                    await logChannel.send({ embeds: [logEmbed] });
+                    await sendToChannelOrForum(logChannel, { embeds: [logEmbed] }, guildData.modLogThread);
                 }
             }
 
         } catch (error) {
             console.error('Erreur ban:', error);
-            await interaction.reply({
-                content: '❌ Une erreur est survenue lors du bannissement.',
-                ephemeral: true
-            });
+            
+            if (interaction.deferred) {
+                await interaction.editReply({
+                    content: '❌ Une erreur est survenue lors du bannissement.'
+                });
+            } else {
+                await interaction.reply({
+                    content: '❌ Une erreur est survenue lors du bannissement.',
+                    flags: MessageFlags.Ephemeral
+                });
+            }
         }
     }
 };

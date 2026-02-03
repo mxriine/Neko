@@ -64,6 +64,7 @@ model Guild {
   modEnabled          Boolean @default(false)
   modRole             String?
   modLogChannel       String?
+  modLogThread        String?
   autoModEnabled      Boolean @default(false)
   antiSpam            Boolean @default(false)
   antiLink            Boolean @default(false)
@@ -71,6 +72,11 @@ model Guild {
   // ROLES AUTO
   autoRoleEnabled     Boolean @default(false)
   autoRoleId          String?
+
+  // BIRTHDAYS
+  birthdayEnabled     Boolean @default(false)
+  birthdayChannel     String?
+  birthdayMessage     String  @default("🎉 Joyeux anniversaire {user} ! Tu as maintenant {age} ans ! 🎂")
 
   // Relations
   users               User[]
@@ -84,13 +90,15 @@ model User {
   discordId         String    // Discord User ID
   username          String
   guildId           String    // Discord Guild ID
-  createdAt         DateTime  @default(now())
-  updatedAt         DateTime  @updatedAt
-  birthday          String?
+  createdAt                DateTime  @default(now())
+  updatedAt                DateTime  @updatedAt
+  birthday                 String?
+  lastBirthdayMessageSent  DateTime?
   
   // TICKETS
   hasTicket         Boolean   @default(false)
   ticketMessageId   String?
+  ticketReason      String?
 
   // LEVELS
   level             Int       @default(0)
@@ -101,6 +109,11 @@ model User {
   // GUILD STATUS
   inGuild           Boolean   @default(true)
   leftAt            DateTime?
+
+  // BAN STATUS
+  isBanned          Boolean   @default(false)
+  bannedAt          DateTime?
+  banReason         String?
 
   // WARNINGS
   warnings          Warning[]

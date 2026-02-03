@@ -32,7 +32,8 @@ module.exports = {
           { name: "Bye", value: "bye" },
           { name: "Tickets", value: "tickets" },
           { name: "Level", value: "level" },
-          { name: "Modération", value: "moderation" }
+          { name: "Modération", value: "moderation" },
+          { name: "Anniversaires", value: "birthday" }
         )
     )
     .addChannelOption(option =>
@@ -56,6 +57,11 @@ module.exports = {
         .setDescription("Salon des logs de tickets (optionnel)")
         .addChannelTypes(ChannelType.GuildText)
         .setRequired(false)
+    )
+    .addStringOption(option =>
+      option.setName("thread_id")
+        .setDescription("ID du thread dans le forum (pour modération)")
+        .setRequired(false)
     ),
 
   // ————————————————————————————————————————
@@ -66,10 +72,10 @@ module.exports = {
     const channel = message.mentions.channels.first();
 
     if (!type || !channel) {
-      return message.reply("Usage : `setup <type> <#salon>`\nTypes : announces, logs, welcome, bye, tickets, level, moderation");
+      return message.reply("Usage : `setup <type> <#salon>`\nTypes : announces, logs, welcome, bye, tickets, level, moderation, birthday");
     }
 
-    const validTypes = ["announces", "logs", "welcome", "bye", "tickets", "level", "moderation"];
+    const validTypes = ["announces", "logs", "welcome", "bye", "tickets", "level", "moderation", "birthday"];
     if (!validTypes.includes(type)) {
       return message.reply("Type invalide. Types disponibles : " + validTypes.join(", "));
     }
@@ -82,7 +88,8 @@ module.exports = {
       bye: "byeChannel",
       tickets: "ticketChannel",
       level: "levelChannel",
-      moderation: "modLogChannel"
+      moderation: "modLogChannel",
+      birthday: "birthdayChannel"
     };
 
     const enabledMap = {
@@ -92,7 +99,8 @@ module.exports = {
       bye: "byeEnabled",
       tickets: "ticketEnabled",
       level: "levelEnabled",
-      moderation: "modEnabled"
+      moderation: "modEnabled",
+      birthday: "birthdayEnabled"
     };
 
     await client.updateGuild(guildSettings.id, {
@@ -100,7 +108,7 @@ module.exports = {
       [enabledMap[type]]: true
     });
 
-    return message.reply(`✅ Salon **${type}** configuré sur ${channel}`);
+    return message.reply(`Salon **${type}** configuré sur ${channel}`);
   },
 
   // ————————————————————————————————————————
@@ -118,7 +126,7 @@ module.exports = {
 
       if (!category) {
         return interaction.reply({
-          content: '❌ Une catégorie est requise pour configurer les tickets !',
+          content: 'Une catégorie est requise pour configurer les tickets !',
           flags: MessageFlags.Ephemeral
         });
       }
@@ -158,18 +166,18 @@ module.exports = {
 
         // Confirmation
         await interaction.reply({
-          content: `✅ Système de tickets configuré avec succès !\n` +
-                   `📍 Panel: ${channel}\n` +
+          content: `Système de tickets configuré avec succès !\n` +
+                   `Panel: ${channel}\n` +
                    `📁 Catégorie: ${category}\n` +
-                   (supportRole ? `👥 Support: ${supportRole}\n` : '') +
-                   (logsChannel ? `📋 Logs: ${logsChannel}` : ''),
+                   (supportRole ? `Support: ${supportRole}\n` : '') +
+                   (logsChannel ? `Logs: ${logsChannel}` : ''),
           flags: MessageFlags.Ephemeral
         });
 
       } catch (error) {
         console.error('Erreur setup tickets:', error);
         await interaction.reply({
-          content: '❌ Une erreur est survenue lors de la configuration.',
+          content: 'Une erreur est survenue lors de la configuration.',
           flags: MessageFlags.Ephemeral
         });
       }
@@ -183,7 +191,8 @@ module.exports = {
       welcome: "welcomeChannel",
       bye: "byeChannel",
       level: "levelChannel",
-      moderation: "modLogChannel"
+      moderation: "modLogChannel",
+      birthday: "birthdayChannel"
     };
 
     const enabledMap = {
@@ -192,26 +201,40 @@ module.exports = {
       welcome: "welcomeEnabled",
       bye: "byeEnabled",
       level: "levelEnabled",
-      moderation: "modEnabled"
+      moderation: "modEnabled",
+      birthday: "birthdayEnabled"
     };
 
     try {
+      const updateData = {
+        [fieldMap[type]]: channel.id,
+        [enabledMap[type]]: true
+      };
+
+      // Si c'est la modération et qu'un thread_id est fourni
+      const threadId = interaction.options.getString("thread_id");
+      if (type === "moderation" && threadId) {
+        updateData.modLogThread = threadId;
+      }
+
       await client.prisma.guild.update({
         where: { id: interaction.guild.id },
-        data: {
-          [fieldMap[type]]: channel.id,
-          [enabledMap[type]]: true
-        }
+        data: updateData
       });
 
+      let confirmMessage = `Salon **${type}** configuré sur ${channel}`;
+      if (type === "moderation" && threadId) {
+        confirmMessage += `\n🧵 Thread configuré : \`${threadId}\``;
+      }
+
       return interaction.reply({
-        content: `✅ Salon **${type}** configuré sur ${channel}`,
+        content: confirmMessage,
         flags: MessageFlags.Ephemeral
       });
     } catch (error) {
       console.error('Erreur setup:', error);
       return interaction.reply({
-        content: '❌ Une erreur est survenue lors de la configuration.',
+        content: 'Une erreur est survenue lors de la configuration.',
         flags: MessageFlags.Ephemeral
       });
     }

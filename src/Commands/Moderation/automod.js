@@ -87,44 +87,44 @@ module.exports = {
                         .setTitle('⚙️ État de l\'Auto-Modération')
                         .addFields(
                             {
-                                name: '🛡️ Auto-Modération',
-                                value: guildData.autoModEnabled ? '✅ Activée' : '❌ Désactivée',
+                                name: 'Auto-Modération',
+                                value: guildData.autoModEnabled ? 'Activée' : 'Désactivée',
                                 inline: true
                             },
                             {
-                                name: '🚫 Anti-Spam',
-                                value: guildData.antiSpam ? '✅ Actif' : '❌ Inactif',
+                                name: 'Anti-Spam',
+                                value: guildData.antiSpam ? 'Actif' : 'Inactif',
                                 inline: true
                             },
                             {
-                                name: '🔗 Anti-Liens',
-                                value: guildData.antiLink ? '✅ Actif' : '❌ Inactif',
+                                name: 'Anti-Liens',
+                                value: guildData.antiLink ? 'Actif' : 'Inactif',
                                 inline: true
                             },
                             {
-                                name: '📊 Configuration Anti-Spam',
+                                name: 'Configuration Anti-Spam',
                                 value: `• Max messages: **${autoMod.spam.maxMessages}** en **${autoMod.spam.timeWindow / 1000}s**\n` +
                                        `• Timeout: **${autoMod.spam.muteTime / 60000} minutes**\n` +
                                        `• Warn après: **${autoMod.spam.warnAfter}** infractions`,
                                 inline: false
                             },
                             {
-                                name: '🔗 Domaines autorisés',
+                                name: 'Domaines autorisés',
                                 value: autoMod.links.allowedDomains.map(d => `\`${d}\``).join(', ') || 'Aucun',
                                 inline: false
                             },
                             {
-                                name: '👥 Anti-Mentions',
+                                name: 'Anti-Mentions',
                                 value: `Max **${autoMod.mentions.maxMentions}** mentions par message`,
                                 inline: true
                             },
                             {
-                                name: '📢 Anti-CAPS',
+                                name: 'Anti-CAPS',
                                 value: `Max **${autoMod.caps.percentage}%** de CAPS (min ${autoMod.caps.minLength} caractères)`,
                                 inline: true
                             },
                             {
-                                name: '📋 Logs',
+                                name: 'Logs',
                                 value: guildData.modLogChannel ? `<#${guildData.modLogChannel}>` : '❌ Non configuré',
                                 inline: false
                             }
@@ -142,7 +142,7 @@ module.exports = {
                     });
 
                     await interaction.reply({
-                        content: '✅ Auto-modération activée !',
+                        content: 'Auto-modération activée !',
                         ephemeral: true
                     });
                     break;
@@ -155,7 +155,7 @@ module.exports = {
                     });
 
                     await interaction.reply({
-                        content: '❌ Auto-modération désactivée.',
+                        content: 'Auto-modération désactivée.',
                         ephemeral: true
                     });
                     break;
@@ -170,7 +170,7 @@ module.exports = {
                     });
 
                     await interaction.reply({
-                        content: enabled ? '✅ Anti-spam activé !' : '❌ Anti-spam désactivé.',
+                        content: enabled ? 'Anti-spam activé !' : 'Anti-spam désactivé.',
                         ephemeral: true
                     });
                     break;
@@ -185,7 +185,7 @@ module.exports = {
                     });
 
                     await interaction.reply({
-                        content: enabled ? '✅ Anti-liens activé !' : '❌ Anti-liens désactivé.',
+                        content: enabled ? 'Anti-liens activé !' : 'Anti-liens désactivé.',
                         ephemeral: true
                     });
                     break;
@@ -200,7 +200,7 @@ module.exports = {
                     });
 
                     await interaction.reply({
-                        content: `✅ Salon de logs défini sur ${channel}`,
+                        content: `Salon de logs défini sur ${channel}`,
                         ephemeral: true
                     });
                     break;
@@ -216,7 +216,7 @@ module.exports = {
                     }
 
                     await interaction.reply({
-                        content: `✅ Mot ajouté à la liste des mots interdits : \`${word}\``,
+                        content: `Mot ajouté à la liste des mots interdits : \`${word}\``,
                         ephemeral: true
                     });
                     break;
@@ -226,7 +226,7 @@ module.exports = {
         } catch (error) {
             console.error('Erreur automod:', error);
             await interaction.reply({
-                content: '❌ Une erreur est survenue.',
+                content: 'Une erreur est survenue.',
                 ephemeral: true
             });
         }

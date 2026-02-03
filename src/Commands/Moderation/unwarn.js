@@ -1,10 +1,11 @@
-const { SlashCommandBuilder, EmbedBuilder, PermissionFlagsBits } = require('discord.js');
+const { SlashCommandBuilder, EmbedBuilder, PermissionFlagsBits, MessageFlags } = require('discord.js');
 const config = require('../../../config/bot.config');
+const { sendToChannelOrForum } = require('../../Assets/Functions/channelHelper');
 
 module.exports = {
     data: new SlashCommandBuilder()
         .setName('unwarn')
-        .setDescription('🗑️ Retirer un avertissement')
+        .setDescription('Retirer un avertissement')
         .addUserOption(option =>
             option
                 .setName('membre')
@@ -32,8 +33,8 @@ module.exports = {
 
             if (warnings.length === 0) {
                 return interaction.reply({
-                    content: `❌ ${target} n'a aucun avertissement.`,
-                    ephemeral: true
+                    content: `${target} n'a aucun avertissement.`,
+                    flags: MessageFlags.Ephemeral
                 });
             }
 
@@ -46,13 +47,12 @@ module.exports = {
                 });
 
                 const embed = new EmbedBuilder()
-                    .setColor(config.colors.success)
-                    .setTitle('✅ Avertissements supprimés')
+                    .setTitle('Avertissements supprimés')
                     .setDescription(`Tous les avertissements de ${target} ont été retirés.`)
                     .addFields(
-                        { name: '👤 Membre', value: target.tag, inline: true },
-                        { name: '🗑️ Supprimés', value: `${warnings.length} warning(s)`, inline: true },
-                        { name: '👮 Par', value: interaction.user.tag, inline: true }
+                        { name: 'Membre', value: target.tag, inline: true },
+                        { name: 'Supprimés', value: `${warnings.length} warning(s)`, inline: true },
+                        { name: 'Par', value: interaction.user.tag, inline: true }
                     )
                     .setTimestamp()
                     .setFooter({ text: `ID: ${target.id}` });
@@ -65,16 +65,15 @@ module.exports = {
                     const logChannel = interaction.guild.channels.cache.get(guildData.modLogChannel);
                     if (logChannel) {
                         const logEmbed = new EmbedBuilder()
-                            .setColor(config.colors.success)
-                            .setTitle('📋 Avertissements supprimés')
+                            .setTitle('Avertissements supprimés')
                             .addFields(
-                                { name: '👤 Membre', value: `${target} (${target.tag})`, inline: true },
-                                { name: '👮 Par', value: `${interaction.user} (${interaction.user.tag})`, inline: true },
-                                { name: '🗑️ Supprimés', value: `${warnings.length} warning(s)`, inline: true }
+                                { name: 'Membre', value: `${target} (${target.tag})`, inline: true },
+                                { name: 'Par', value: `${interaction.user} (${interaction.user.tag})`, inline: true },
+                                { name: 'Supprimés', value: `${warnings.length} warning(s)`, inline: true }
                             )
                             .setTimestamp();
 
-                        await logChannel.send({ embeds: [logEmbed] });
+                        await sendToChannelOrForum(logChannel, { embeds: [logEmbed] }, guildData.modLogThread);
                     }
                 }
 
@@ -84,8 +83,8 @@ module.exports = {
             // Retirer un warning spécifique
             if (warningNumber > warnings.length) {
                 return interaction.reply({
-                    content: `❌ ${target} n'a que ${warnings.length} avertissement(s).`,
-                    ephemeral: true
+                    content: `${target} n'a que ${warnings.length} avertissement(s).`,
+                    flags: MessageFlags.Ephemeral
                 });
             }
 
@@ -96,14 +95,13 @@ module.exports = {
             });
 
             const embed = new EmbedBuilder()
-                .setColor(config.colors.success)
-                .setTitle('✅ Avertissement retiré')
+                .setTitle('Avertissement retiré')
                 .setDescription(`L'avertissement #${warningNumber} de ${target} a été retiré.`)
                 .addFields(
-                    { name: '👤 Membre', value: target.tag, inline: true },
-                    { name: '📊 Warnings restants', value: `${warnings.length - 1}/${config.features.moderation.maxWarnings}`, inline: true },
-                    { name: '📝 Raison supprimée', value: warningToRemove.reason, inline: false },
-                    { name: '👮 Retiré par', value: interaction.user.tag, inline: true }
+                    { name: 'Membre', value: target.tag, inline: true },
+                    { name: 'Warnings restants', value: `${warnings.length - 1}/${config.features.moderation.maxWarnings}`, inline: true },
+                    { name: 'Raison supprimée', value: warningToRemove.reason, inline: false },
+                    { name: 'Retiré par', value: interaction.user.tag, inline: true }
                 )
                 .setTimestamp()
                 .setFooter({ text: `ID: ${target.id}` });
@@ -116,25 +114,24 @@ module.exports = {
                 const logChannel = interaction.guild.channels.cache.get(guildData.modLogChannel);
                 if (logChannel) {
                     const logEmbed = new EmbedBuilder()
-                        .setColor(config.colors.success)
-                        .setTitle('📋 Avertissement retiré')
+                        .setTitle('Avertissement retiré')
                         .addFields(
-                            { name: '👤 Membre', value: `${target} (${target.tag})`, inline: true },
-                            { name: '👮 Par', value: `${interaction.user} (${interaction.user.tag})`, inline: true },
-                            { name: '🗑️ Warning #', value: `${warningNumber}`, inline: true },
-                            { name: '📝 Raison', value: warningToRemove.reason, inline: false }
+                            { name: 'Membre', value: `${target} (${target.tag})`, inline: true },
+                            { name: 'Par', value: `${interaction.user} (${interaction.user.tag})`, inline: true },
+                            { name: 'Warning #', value: `${warningNumber}`, inline: true },
+                            { name: 'Raison', value: warningToRemove.reason, inline: false }
                         )
                         .setTimestamp();
 
-                    await logChannel.send({ embeds: [logEmbed] });
+                    await sendToChannelOrForum(logChannel, { embeds: [logEmbed] }, guildData.modLogThread);
                 }
             }
 
         } catch (error) {
             console.error('Erreur unwarn:', error);
             await interaction.reply({
-                content: '❌ Une erreur est survenue lors de la suppression de l\'avertissement.',
-                ephemeral: true
+                content: 'Une erreur est survenue lors de la suppression de l\'avertissement.',
+                flags: MessageFlags.Ephemeral
             });
         }
     }

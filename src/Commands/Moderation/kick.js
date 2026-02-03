@@ -1,10 +1,11 @@
-const { SlashCommandBuilder, EmbedBuilder, PermissionFlagsBits } = require('discord.js');
+const { SlashCommandBuilder, EmbedBuilder, PermissionFlagsBits, MessageFlags } = require('discord.js');
 const config = require('../../../config/bot.config');
+const { sendToChannelOrForum } = require('../../Assets/Functions/channelHelper');
 
 module.exports = {
     data: new SlashCommandBuilder()
         .setName('kick')
-        .setDescription('👢 Expulser un membre du serveur')
+        .setDescription('Expulser un membre du serveur')
         .addUserOption(option =>
             option
                 .setName('membre')
@@ -23,43 +24,40 @@ module.exports = {
     category: 'Moderation',
 
     async execute(client, interaction) {
+        await interaction.deferReply();
+
         const target = interaction.options.getUser('membre');
         const reason = interaction.options.getString('raison') || 'Aucune raison spécifiée';
         const member = interaction.guild.members.cache.get(target.id);
 
         // Vérifications
         if (target.id === interaction.user.id) {
-            return interaction.reply({
-                content: '❌ Vous ne pouvez pas vous expulser vous-même !',
-                ephemeral: true
+            return interaction.editReply({
+                content: 'Vous ne pouvez pas vous expulser vous-même !'
             });
         }
 
         if (target.bot) {
-            return interaction.reply({
-                content: '❌ Vous ne pouvez pas expulser un bot !',
-                ephemeral: true
+            return interaction.editReply({
+                content: 'Vous ne pouvez pas expulser un bot !'
             });
         }
 
         if (!member) {
-            return interaction.reply({
-                content: '❌ Ce membre n\'est pas sur le serveur.',
-                ephemeral: true
+            return interaction.editReply({
+                content: 'Ce membre n\'est pas sur le serveur.'
             });
         }
 
         if (!member.kickable) {
-            return interaction.reply({
-                content: '❌ Je ne peux pas expulser ce membre (rôle supérieur ou permissions insuffisantes).',
-                ephemeral: true
+            return interaction.editReply({
+                content: 'Je ne peux pas expulser ce membre (rôle supérieur ou permissions insuffisantes).'
             });
         }
 
         if (member.roles.highest.position >= interaction.member.roles.highest.position) {
-            return interaction.reply({
-                content: '❌ Vous ne pouvez pas expulser ce membre (rôle supérieur ou égal).',
-                ephemeral: true
+            return interaction.editReply({
+                content: 'Vous ne pouvez pas expulser ce membre (rôle supérieur ou égal).'
             });
         }
 
@@ -67,11 +65,10 @@ module.exports = {
             // MP à l'utilisateur
             try {
                 const dmEmbed = new EmbedBuilder()
-                    .setColor(config.colors.error)
-                    .setTitle(`👢 Vous avez été expulsé de ${interaction.guild.name}`)
+                    .setTitle(`Vous avez été expulsé de ${interaction.guild.name}`)
                     .addFields(
-                        { name: '📝 Raison', value: reason, inline: false },
-                        { name: '👮 Par', value: interaction.user.tag, inline: false }
+                        { name: 'Raison', value: reason, inline: false },
+                        { name: 'Par', value: interaction.user.tag, inline: false }
                     )
                     .setTimestamp();
 
@@ -85,18 +82,17 @@ module.exports = {
 
             // Embed de confirmation
             const embed = new EmbedBuilder()
-                .setColor(config.colors.error)
-                .setTitle('👢 Membre expulsé')
+                .setTitle('Membre expulsé')
                 .setDescription(`${target} a été expulsé du serveur`)
                 .addFields(
-                    { name: '👤 Membre', value: target.tag, inline: true },
-                    { name: '👮 Modérateur', value: interaction.user.tag, inline: true },
-                    { name: '📝 Raison', value: reason, inline: false }
+                    { name: 'Membre', value: target.tag, inline: true },
+                    { name: 'Modérateur', value: interaction.user.tag, inline: true },
+                    { name: 'Raison', value: reason, inline: false }
                 )
                 .setTimestamp()
                 .setFooter({ text: `ID: ${target.id}` });
 
-            await interaction.reply({ embeds: [embed] });
+            await interaction.editReply({ embeds: [embed] });
 
             // Log
             const guildData = await client.getGuild(interaction.guild.id, interaction.guild.name);
@@ -104,26 +100,32 @@ module.exports = {
                 const logChannel = interaction.guild.channels.cache.get(guildData.modLogChannel);
                 if (logChannel) {
                     const logEmbed = new EmbedBuilder()
-                        .setColor(config.colors.error)
-                        .setTitle('📋 Membre expulsé')
+                        .setTitle('Membre expulsé')
                         .addFields(
-                            { name: '👤 Membre', value: `${target} (${target.tag})`, inline: true },
-                            { name: '👮 Modérateur', value: `${interaction.user} (${interaction.user.tag})`, inline: true },
-                            { name: '📝 Raison', value: reason, inline: false }
+                            { name: 'Membre', value: `${target} (${target.tag})`, inline: true },
+                            { name: 'Modérateur', value: `${interaction.user} (${interaction.user.tag})`, inline: true },
+                            { name: 'Raison', value: reason, inline: false }
                         )
                         .setTimestamp()
                         .setFooter({ text: `ID: ${target.id}` });
 
-                    await logChannel.send({ embeds: [logEmbed] });
+                    await sendToChannelOrForum(logChannel, { embeds: [logEmbed] }, guildData.modLogThread);
                 }
             }
 
         } catch (error) {
             console.error('Erreur kick:', error);
-            await interaction.reply({
-                content: '❌ Une erreur est survenue lors de l\'expulsion.',
-                ephemeral: true
-            });
+            
+            if (interaction.deferred) {
+                await interaction.editReply({
+                    content: 'Une erreur est survenue lors de l\'expulsion.'
+                });
+            } else {
+                await interaction.reply({
+                    content: 'Une erreur est survenue lors de l\'expulsion.',
+                    flags: MessageFlags.Ephemeral
+                });
+            }
         }
     }
 };

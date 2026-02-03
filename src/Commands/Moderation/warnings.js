@@ -1,4 +1,4 @@
-const { SlashCommandBuilder, EmbedBuilder, PermissionFlagsBits } = require('discord.js');
+const { SlashCommandBuilder, EmbedBuilder, PermissionFlagsBits, MessageFlags } = require('discord.js');
 const config = require('../../../config/bot.config');
 
 module.exports = {
@@ -24,8 +24,7 @@ module.exports = {
 
             if (warnings.length === 0) {
                 const embed = new EmbedBuilder()
-                    .setColor(config.colors.success)
-                    .setTitle('✅ Aucun avertissement')
+                    .setTitle('Aucun avertissement')
                     .setDescription(`${target} n'a aucun avertissement sur ce serveur.`)
                     .setTimestamp();
 
@@ -47,12 +46,11 @@ module.exports = {
             }).join('\n');
 
             const embed = new EmbedBuilder()
-                .setColor(config.colors.warning)
-                .setTitle(`⚠️ Avertissements de ${target.tag}`)
+                .setTitle(`Avertissements de ${target.tag}`)
                 .setDescription(warningsList)
                 .setThumbnail(target.displayAvatarURL())
                 .addFields({
-                    name: '📊 Total',
+                    name: 'Total',
                     value: `${warnings.length}/${config.features.moderation.maxWarnings} avertissements`,
                     inline: false
                 })
@@ -64,8 +62,8 @@ module.exports = {
         } catch (error) {
             console.error('Erreur warnings:', error);
             await interaction.reply({
-                content: '❌ Une erreur est survenue lors de la récupération des avertissements.',
-                ephemeral: true
+                content: 'Une erreur est survenue lors de la récupération des avertissements.',
+                flags: MessageFlags.Ephemeral
             });
         }
     }

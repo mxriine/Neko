@@ -1,10 +1,11 @@
-const { SlashCommandBuilder, EmbedBuilder, PermissionFlagsBits } = require('discord.js');
+const { SlashCommandBuilder, EmbedBuilder, PermissionFlagsBits, MessageFlags } = require('discord.js');
 const config = require('../../../config/bot.config');
+const { sendToChannelOrForum } = require('../../Assets/Functions/channelHelper');
 
 module.exports = {
     data: new SlashCommandBuilder()
         .setName('warn')
-        .setDescription('⚠️ Avertir un membre')
+        .setDescription('Avertir un membre')
         .addUserOption(option =>
             option
                 .setName('membre')
@@ -23,6 +24,8 @@ module.exports = {
     category: 'Moderation',
 
     async execute(client, interaction) {
+        await interaction.deferReply();
+
         const target = interaction.options.getUser('membre');
         const reason = interaction.options.getString('raison');
         const member = interaction.guild.members.cache.get(target.id);
@@ -30,22 +33,22 @@ module.exports = {
         // Vérifications
         if (target.id === interaction.user.id) {
             return interaction.reply({
-                content: '❌ Vous ne pouvez pas vous avertir vous-même !',
-                ephemeral: true
+                content: 'Vous ne pouvez pas vous avertir vous-même !',
+                flags: MessageFlags.Ephemeral
             });
         }
 
         if (target.bot) {
             return interaction.reply({
-                content: '❌ Vous ne pouvez pas avertir un bot !',
-                ephemeral: true
+                content: 'Vous ne pouvez pas avertir un bot !',
+                flags: MessageFlags.Ephemeral
             });
         }
 
         if (member && member.roles.highest.position >= interaction.member.roles.highest.position) {
             return interaction.reply({
-                content: '❌ Vous ne pouvez pas avertir ce membre (rôle supérieur ou égal) !',
-                ephemeral: true
+                content: 'Vous ne pouvez pas avertir ce membre (rôle supérieur ou égal) !',
+                flags: MessageFlags.Ephemeral
             });
         }
 
@@ -74,54 +77,52 @@ module.exports = {
 
             // Embed de confirmation
             const embed = new EmbedBuilder()
-                .setColor(config.colors.warning)
-                .setTitle('⚠️ Avertissement ajouté')
+                .setTitle('Avertissement ajouté')
                 .setDescription(`${target} a reçu un avertissement`)
                 .addFields(
-                    { name: '👤 Membre', value: target.tag, inline: true },
-                    { name: '📊 Warnings', value: `${warnCount}/12`, inline: true },
-                    { name: '📝 Raison', value: reason, inline: false },
-                    { name: '👮 Modérateur', value: interaction.user.tag, inline: true }
+                    { name: 'Membre', value: target.tag, inline: true },
+                    { name: 'Warnings', value: `${warnCount}/12`, inline: true },
+                    { name: 'Raison', value: reason, inline: false },
+                    { name: 'Modérateur', value: interaction.user.tag, inline: true }
                 )
                 .setTimestamp()
                 .setFooter({ text: `ID: ${target.id}` });
 
             if (autoAction) {
                 const actions = {
-                    'kick': '👢 Kick automatique à 3 warnings',
-                    'ban_temporaire': '🔨 Ban temporaire (7 jours) à 9 warnings',
-                    'ban_permanent': '⛔ Ban permanent à 12 warnings'
+                    'kick': 'Kick automatique à 3 warnings',
+                    'ban_temporaire': 'Ban temporaire (7 jours) à 9 warnings',
+                    'ban_permanent': 'Ban permanent à 12 warnings'
                 };
                 embed.addFields({ 
-                    name: '🚨 Action automatique', 
+                    name: 'Action automatique', 
                     value: actions[autoAction], 
                     inline: false 
                 });
             }
 
-            await interaction.reply({ embeds: [embed] });
+            await interaction.editReply({ embeds: [embed] });
 
             // MP à l'utilisateur avec avertissement
             try {
                 const dmEmbed = new EmbedBuilder()
-                    .setColor(config.colors.warning)
-                    .setTitle(`⚠️ Avertissement reçu sur ${interaction.guild.name}`)
+                    .setTitle(`Avertissement reçu sur ${interaction.guild.name}`)
                     .addFields(
-                        { name: '📝 Raison', value: reason, inline: false },
-                        { name: '📊 Total', value: `${warnCount}/12 warnings`, inline: true }
+                        { name: 'Raison', value: reason, inline: false },
+                        { name: 'Total', value: `${warnCount}/12 warnings`, inline: true }
                     )
                     .setTimestamp();
 
                 // Ajouter un message selon le nombre de warnings
                 if (warnCount >= 12) {
-                    dmEmbed.setDescription('⛔ **VOUS ALLEZ ÊTRE BANNI DÉFINITIVEMENT !**');
+                    dmEmbed.setDescription('**VOUS ALLEZ ÊTRE BANNI DÉFINITIVEMENT !**');
                 } else if (warnCount >= 9) {
-                    dmEmbed.setDescription('🔨 **VOUS ALLEZ ÊTRE BANNI TEMPORAIREMENT !**');
+                    dmEmbed.setDescription('**VOUS ALLEZ ÊTRE BANNI TEMPORAIREMENT !**');
                 } else if (warnCount >= 3) {
-                    dmEmbed.setDescription('👢 **VOUS ALLEZ ÊTRE EXPULSÉ !**');
+                    dmEmbed.setDescription('**VOUS ALLEZ ÊTRE EXPULSÉ !**');
                 } else if (warnCount === 2) {
                     dmEmbed.addFields({
-                        name: '⚠️ Attention !',
+                        name: 'Attention !',
                         value: 'Au prochain avertissement vous serez expulsé du serveur.',
                         inline: false
                     });
@@ -132,8 +133,8 @@ module.exports = {
                 await target.send({ embeds: [dmEmbed] });
             } catch (error) {
                 await interaction.followUp({
-                    content: '⚠️ Impossible d\'envoyer un MP au membre.',
-                    ephemeral: true
+                    content: 'Impossible d\'envoyer un MP au membre.',
+                    flags: MessageFlags.Ephemeral
                 });
             }
 
@@ -146,12 +147,12 @@ module.exports = {
                         deleteMessageSeconds: 0
                     });
                     await interaction.followUp({
-                        content: `⛔ ${target} a été **banni définitivement** pour avoir atteint 12 avertissements.`
+                        content: `${target} a été **banni définitivement** pour avoir atteint 12 avertissements.`
                     });
                 } catch (error) {
                     await interaction.followUp({
-                        content: `❌ Impossible de bannir ${target}.`,
-                        ephemeral: true
+                        content: `Impossible de bannir ${target}.`,
+                        flags: MessageFlags.Ephemeral
                     });
                 }
             } else if (warnCount >= 9) {
@@ -172,12 +173,12 @@ module.exports = {
                     }, 7 * 24 * 60 * 60 * 1000);
 
                     await interaction.followUp({
-                        content: `🔨 ${target} a été **banni pour 7 jours** pour avoir atteint 9 avertissements.`
+                        content: `${target} a été **banni pour 7 jours** pour avoir atteint 9 avertissements.`
                     });
                 } catch (error) {
                     await interaction.followUp({
-                        content: `❌ Impossible de bannir ${target}.`,
-                        ephemeral: true
+                        content: `Impossible de bannir ${target}.`,
+                        flags: MessageFlags.Ephemeral
                     });
                 }
             } else if (warnCount >= 3) {
@@ -185,12 +186,12 @@ module.exports = {
                 try {
                     await member.kick(`3 avertissements atteints`);
                     await interaction.followUp({
-                        content: `👢 ${target} a été **expulsé** pour avoir atteint 3 avertissements.`
+                        content: `${target} a été **expulsé** pour avoir atteint 3 avertissements.`
                     });
                 } catch (error) {
                     await interaction.followUp({
-                        content: `❌ Impossible d'expulser ${target}.`,
-                        ephemeral: true
+                        content: `Impossible d'expulser ${target}.`,
+                        flags: MessageFlags.Ephemeral
                     });
                 }
             }
@@ -201,40 +202,46 @@ module.exports = {
                 const logChannel = interaction.guild.channels.cache.get(guildData.modLogChannel);
                 if (logChannel) {
                     const logEmbed = new EmbedBuilder()
-                        .setColor(config.colors.warning)
-                        .setTitle('📋 Avertissement ajouté')
+                        .setTitle('Avertissement ajouté')
                         .addFields(
-                            { name: '👤 Membre', value: `${target} (${target.tag})`, inline: true },
-                            { name: '👮 Modérateur', value: `${interaction.user} (${interaction.user.tag})`, inline: true },
-                            { name: '📊 Warnings', value: `${warnCount}/12`, inline: true },
-                            { name: '📝 Raison', value: reason, inline: false }
+                            { name: 'Membre', value: `${target} (${target.tag})`, inline: true },
+                            { name: 'Modérateur', value: `${interaction.user} (${interaction.user.tag})`, inline: true },
+                            { name: 'Warnings', value: `${warnCount}/12`, inline: true },
+                            { name: 'Raison', value: reason, inline: false }
                         )
                         .setTimestamp()
                         .setFooter({ text: `ID: ${target.id}` });
 
                     if (autoAction) {
                         const actions = {
-                            'kick': '👢 Expulsé automatiquement',
-                            'ban_temporaire': '🔨 Banni 7 jours automatiquement',
-                            'ban_permanent': '⛔ Banni définitivement'
+                            'kick': 'Expulsé automatiquement',
+                            'ban_temporaire': 'Banni 7 jours automatiquement',
+                            'ban_permanent': 'Banni définitivement'
                         };
                         logEmbed.addFields({
-                            name: '🚨 Action',
+                            name: 'Action',
                             value: actions[autoAction],
                             inline: false
                         });
                     }
 
-                    await logChannel.send({ embeds: [logEmbed] });
+                    await sendToChannelOrForum(logChannel, { embeds: [logEmbed] }, guildData.modLogThread);
                 }
             }
 
         } catch (error) {
             console.error('Erreur warn:', error);
-            await interaction.reply({
-                content: '❌ Une erreur est survenue lors de l\'ajout de l\'avertissement.',
-                ephemeral: true
-            });
+            
+            if (interaction.deferred) {
+                await interaction.editReply({
+                    content: 'Une erreur est survenue lors de l\'avertissement.'
+                });
+            } else {
+                await interaction.reply({
+                    content: 'Une erreur est survenue lors de l\'avertissement.',
+                    flags: MessageFlags.Ephemeral
+                });
+            }
         }
     }
 };

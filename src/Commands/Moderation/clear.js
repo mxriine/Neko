@@ -1,5 +1,6 @@
 const { SlashCommandBuilder, EmbedBuilder, PermissionFlagsBits, MessageFlags } = require('discord.js');
 const config = require('../../../config/bot.config');
+const { sendToChannelOrForum } = require('../../Assets/Functions/channelHelper');
 
 module.exports = {
     data: new SlashCommandBuilder()
@@ -51,7 +52,7 @@ module.exports = {
 
             if (messagesToDelete.length === 0) {
                 return interaction.editReply({
-                    content: '❌ Aucun message à supprimer (les messages de plus de 14 jours ne peuvent pas être supprimés en masse).'
+                    content: 'Aucun message à supprimer (les messages de plus de 14 jours ne peuvent pas être supprimés en masse).'
                 });
             }
 
@@ -60,17 +61,16 @@ module.exports = {
 
             // Embed de confirmation
             const embed = new EmbedBuilder()
-                .setColor(config.colors.success)
-                .setTitle('🗑️ Messages supprimés')
+                .setTitle('Messages supprimés')
                 .addFields(
-                    { name: '📊 Supprimés', value: `${messagesToDelete.length} message(s)`, inline: true },
-                    { name: '📍 Salon', value: interaction.channel.toString(), inline: true }
+                    { name: 'Supprimés', value: `${messagesToDelete.length} message(s)`, inline: true },
+                    { name: 'Salon', value: interaction.channel.toString(), inline: true }
                 )
                 .setTimestamp();
 
             if (targetUser) {
                 embed.addFields({
-                    name: '👤 Utilisateur',
+                    name: 'Utilisateur',
                     value: targetUser.tag,
                     inline: true
                 });
@@ -78,7 +78,7 @@ module.exports = {
 
             if (oldMessages.length > 0) {
                 embed.addFields({
-                    name: '⚠️ Non supprimés',
+                    name: 'Non supprimés',
                     value: `${oldMessages.length} message(s) de plus de 14 jours`,
                     inline: false
                 });
@@ -92,31 +92,30 @@ module.exports = {
                 const logChannel = interaction.guild.channels.cache.get(guildData.modLogChannel);
                 if (logChannel && logChannel.id !== interaction.channel.id) {
                     const logEmbed = new EmbedBuilder()
-                        .setColor(config.colors.info)
-                        .setTitle('📋 Messages supprimés')
+                        .setTitle('Messages supprimés')
                         .addFields(
-                            { name: '👮 Modérateur', value: `${interaction.user} (${interaction.user.tag})`, inline: true },
-                            { name: '📍 Salon', value: interaction.channel.toString(), inline: true },
-                            { name: '📊 Quantité', value: `${messagesToDelete.length} message(s)`, inline: true }
+                            { name: 'Modérateur', value: `${interaction.user} (${interaction.user.tag})`, inline: true },
+                            { name: 'Salon', value: interaction.channel.toString(), inline: true },
+                            { name: 'Quantité', value: `${messagesToDelete.length} message(s)`, inline: true }
                         )
                         .setTimestamp();
 
                     if (targetUser) {
                         logEmbed.addFields({
-                            name: '👤 Utilisateur filtré',
+                            name: 'Utilisateur filtré',
                             value: targetUser.tag,
                             inline: true
                         });
                     }
 
-                    await logChannel.send({ embeds: [logEmbed] });
+                    await sendToChannelOrForum(logChannel, { embeds: [logEmbed] }, guildData.modLogThread);
                 }
             }
 
         } catch (error) {
             console.error('Erreur clear:', error);
             await interaction.editReply({
-                content: '❌ Une erreur est survenue lors de la suppression des messages.'
+                content: 'Une erreur est survenue lors de la suppression des messages.'
             });
         }
     }

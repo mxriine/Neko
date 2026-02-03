@@ -99,6 +99,7 @@ module.exports = {
         warning: 0xFEE75C,
         error: 0xED4245,
         info: 0x5865F2,
+        birthday: 0xFF69B4, // Rose pour les anniversaires
     },
 
     // Emojis

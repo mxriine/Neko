@@ -793,6 +793,22 @@
                     </div>
                 </div>
 
+                <h3 style="margin: 20px 0 12px 0; font-size: 14px; font-weight: 600; color: var(--text-secondary); border-bottom: 1px solid var(--border); padding-bottom: 8px;">Birthday</h3>
+                <div id="viewUserBirthday" style="margin-bottom: 24px;">
+                    <div class="empty-state" style="padding: 24px;">
+                        <div class="empty-state-icon" style="font-size: 32px;">🎂</div>
+                        <div>No birthday set</div>
+                    </div>
+                </div>
+
+                <h3 style="margin: 20px 0 12px 0; font-size: 14px; font-weight: 600; color: var(--text-secondary); border-bottom: 1px solid var(--border); padding-bottom: 8px;">Moderation</h3>
+                <div id="viewUserBan" style="margin-bottom: 24px;">
+                    <div class="empty-state" style="padding: 24px;">
+                        <div class="empty-state-icon" style="font-size: 32px;">✓</div>
+                        <div>Not banned</div>
+                    </div>
+                </div>
+
                 <h3 style="margin: 20px 0 12px 0; font-size: 14px; font-weight: 600; color: var(--text-secondary); border-bottom: 1px solid var(--border); padding-bottom: 8px;">Ticket</h3>
                 <div id="viewUserTicket" style="margin-bottom: 24px;">
                     <div class="empty-state" style="padding: 24px;">
@@ -900,7 +916,7 @@
                                 <td><span class="badge ${guild.byeEnabled ? 'badge-success' : 'badge-danger'}">${guild.byeEnabled ? 'Enabled' : 'Disabled'}</span></td>
                                 <td><span class="badge ${guild.levelEnabled ? 'badge-success' : 'badge-danger'}">${guild.levelEnabled ? 'Enabled' : 'Disabled'}</span></td>
                                 <td><span class="badge ${guild.ticketEnabled ? 'badge-success' : 'badge-danger'}">${guild.ticketEnabled ? 'Enabled' : 'Disabled'}</span></td>
-                                <td><span class="badge ${guild.modLogEnabled ? 'badge-success' : 'badge-danger'}">${guild.modLogEnabled ? 'Enabled' : 'Disabled'}</span></td>
+                                <td><span class="badge ${guild.modEnabled ? 'badge-success' : 'badge-danger'}">${guild.modEnabled ? 'Enabled' : 'Disabled'}</span></td>
                                 <td>${guild.users.length}</td>
                                 <td>
                                     <div class="actions">
@@ -930,6 +946,8 @@
                             <th>Discord ID</th>
                             <th>Username</th>
                             <th>Guild ID</th>
+                            <th>Status</th>
+                            <th>Birthday</th>
                             <th>Level</th>
                             <th>XP</th>
                             <th>Warnings</th>
@@ -938,11 +956,38 @@
                         </tr>
                     </thead>
                     <tbody>
-                        ${users.map(user => `
+                        ${users.map(user => {
+                            let statusBadge = '';
+                            if (user.isBanned) {
+                                statusBadge = '<span class="badge badge-danger">Banned</span>';
+                            } else if (user.inGuild) {
+                                statusBadge = '<span class="badge badge-success">Active</span>';
+                            } else if (user.leftAt) {
+                                statusBadge = '<span class="badge" style="background: #6b7280; color: white;">Left</span>';
+                            } else {
+                                statusBadge = '<span class="badge" style="background: #f59e0b; color: white;">Kicked</span>';
+                            }
+                            
+                            let birthdayDisplay = '—';
+                            if (user.birthday) {
+                                const [year, month, day] = user.birthday.split('-');
+                                const birthDate = new Date(year, month - 1, day);
+                                const today = new Date();
+                                const age = today.getFullYear() - birthDate.getFullYear();
+                                const nextBirthday = new Date(today.getFullYear(), month - 1, day);
+                                if (nextBirthday < today) nextBirthday.setFullYear(today.getFullYear() + 1);
+                                const daysUntil = Math.ceil((nextBirthday - today) / (1000 * 60 * 60 * 24));
+                                const isToday = daysUntil === 1 && today.getDate() === parseInt(day) && today.getMonth() === parseInt(month) - 1;
+                                birthdayDisplay = `<span style="font-size: 11px;">${day}/${month}/${year}<br><span style="color: var(--text-muted);">${age} ans${isToday ? ' 🎂' : ''}</span></span>`;
+                            }
+                            
+                            return `
                             <tr>
                                 <td><span class="mono">${user.discordId}</span></td>
                                 <td><span class="user-name">${user.username}</span></td>
                                 <td><span class="mono">${user.guildId}</span></td>
+                                <td>${statusBadge}</td>
+                                <td>${birthdayDisplay}</td>
                                 <td>${user.level}</td>
                                 <td>${user.xp.toLocaleString()}</td>
                                 <td><span class="badge ${user.warnings.length > 0 ? 'badge-danger' : 'badge-success'}">${user.warnings.length}</span></td>
@@ -955,7 +1000,8 @@
                                     </div>
                                 </td>
                             </tr>
-                        `).join('')}
+                            `;
+                        }).join('')}
                     </tbody>
                 </table>
             `;
@@ -1052,6 +1098,68 @@
             document.getElementById('viewUserLevel').value = user.level;
             document.getElementById('viewUserXp').value = user.xp.toLocaleString();
             document.getElementById('viewUserWarningsCount').textContent = user.warnings.length;
+            
+            // Affichage du statut de ban
+            const banContainer = document.getElementById('viewUserBan');
+            if (user.isBanned) {
+                const bannedDate = user.bannedAt ? new Date(user.bannedAt).toLocaleString('en-GB', {
+                    day: '2-digit',
+                    month: '2-digit',
+                    year: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                }) : 'Unknown';
+                
+                banContainer.innerHTML = `
+                    <div class="ticket-card" style="border-color: var(--danger);">
+                        <div class="ticket-status" style="color: var(--danger);">
+                            <span>🔨</span>
+                            <span>BANNED</span>
+                        </div>
+                        <div class="ticket-info"><strong>Banned at:</strong> ${bannedDate}</div>
+                        ${user.banReason ? `<div class="ticket-info"><strong>Reason:</strong> ${user.banReason}</div>` : ''}
+                    </div>
+                `;
+            } else {
+                banContainer.innerHTML = `
+                    <div class="empty-state" style="padding: 24px;">
+                        <div class="empty-state-icon" style="font-size: 32px;">✓</div>
+                        <div>Not banned</div>
+                    </div>
+                `;
+            }
+            
+            // Affichage de l'anniversaire
+            const birthdayContainer = document.getElementById('viewUserBirthday');
+            if (user.birthday) {
+                const [year, month, day] = user.birthday.split('-');
+                const birthDate = new Date(year, month - 1, day);
+                const today = new Date();
+                const age = today.getFullYear() - birthDate.getFullYear();
+                const nextBirthday = new Date(today.getFullYear(), month - 1, day);
+                if (nextBirthday < today) nextBirthday.setFullYear(today.getFullYear() + 1);
+                const daysUntil = Math.ceil((nextBirthday - today) / (1000 * 60 * 60 * 24));
+                const isToday = daysUntil === 1 && today.getDate() === parseInt(day) && today.getMonth() === parseInt(month) - 1;
+                
+                birthdayContainer.innerHTML = `
+                    <div class="ticket-card" style="border-color: #FF69B4;">
+                        <div class="ticket-status" style="color: #FF69B4;">
+                            <span>🎂</span>
+                            <span>${isToday ? 'BIRTHDAY TODAY!' : 'BIRTHDAY'}</span>
+                        </div>
+                        <div class="ticket-info"><strong>Date:</strong> ${day}/${month}/${year}</div>
+                        <div class="ticket-info"><strong>Age:</strong> ${age} ans</div>
+                        <div class="ticket-info"><strong>Next birthday:</strong> ${isToday ? "Today! 🎉" : `In ${daysUntil} day${daysUntil > 1 ? 's' : ''}`}</div>
+                    </div>
+                `;
+            } else {
+                birthdayContainer.innerHTML = `
+                    <div class="empty-state" style="padding: 24px;">
+                        <div class="empty-state-icon" style="font-size: 32px;">🎂</div>
+                        <div>No birthday set</div>
+                    </div>
+                `;
+            }
             
             // Affichage du ticket
             const ticketContainer = document.getElementById('viewUserTicket');

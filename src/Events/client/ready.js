@@ -1,5 +1,6 @@
 const Logger = require('../../Loaders/Logger');
 const { REST, Routes } = require('discord.js');
+const { startBirthdaySystem } = require('../../Assets/Functions/BirthdaySystem');
 
 module.exports = {
     name: "clientReady",
@@ -26,5 +27,8 @@ module.exports = {
                 Logger.error(`Erreur lors de l'enregistrement des slash commands: ${error.message}`);
             }
         }
+
+        // Démarrer le système d'anniversaires
+        startBirthdaySystem(client);
     }
 };

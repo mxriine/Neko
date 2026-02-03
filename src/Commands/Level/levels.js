@@ -71,7 +71,6 @@ module.exports = {
         }
 
         const embed = new EmbedBuilder()
-            .setColor('#3498db')
             .setTitle('🏆 Classement des Niveaux')
             .setDescription(description)
             .setFooter({ 
