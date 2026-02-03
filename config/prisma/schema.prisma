@@ -91,6 +91,7 @@ model User {
   // TICKETS
   hasTicket         Boolean   @default(false)
   ticketMessageId   String?
+  ticketReason      String?
 
   // LEVELS
   level             Int       @default(0)

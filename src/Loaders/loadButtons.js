@@ -14,18 +14,26 @@ module.exports = async (client) => {
                 delete require.cache[require.resolve(file)];
                 const btn = require(file);
 
-                if (!btn.name) {
-                    Logger.warn(`[BUTTON] Bouton ignoré : ajouter "name"\n Fichier -> ${file}`);
+                // Support both formats: btn.name and btn.data.name
+                const buttonName = btn.name || btn.data?.name;
+                if (!buttonName) {
+                    Logger.warn(`[BUTTON] Bouton ignoré : ajouter "name" ou "data.name"\n Fichier -> ${file}`);
                     continue;
                 }
 
-                if (typeof btn.runInteraction !== "function") {
-                    Logger.warn(`[BUTTON] Bouton "${btn.name}" ignoré : ajouter "runInteraction"\n Fichier -> ${file}`);
+                // Support both formats: runInteraction and execute
+                const executeFunction = btn.runInteraction || btn.execute;
+                if (typeof executeFunction !== "function") {
+                    Logger.warn(`[BUTTON] Bouton "${buttonName}" ignoré : ajouter "runInteraction" ou "execute"\n Fichier -> ${file}`);
                     continue;
                 }
 
-                client.buttons.set(btn.name, btn);
-                Logger.button(`- ${btn.name}`);
+                // Normalize to have both name and execute
+                if (!btn.name) btn.name = buttonName;
+                if (!btn.execute) btn.execute = executeFunction;
+
+                client.buttons.set(buttonName, btn);
+                Logger.button(`- ${buttonName}`);
 
             } catch (err) {
                 Logger.error(`[BUTTON] Erreur lors du chargement : ${file}`);

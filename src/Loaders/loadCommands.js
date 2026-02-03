@@ -17,28 +17,39 @@ module.exports = async (client) => {
                 delete require.cache[require.resolve(file)];
                 const cmd = require(file);
 
-                if (!cmd.name) {
-                    Logger.warn(`[CMD] Commande ignorée : ajouter "name".\n Fichier -> ${file}`);
+                // Support pour les deux formats : cmd.name et cmd.data.name
+                const commandName = cmd.name || cmd.data?.name;
+                
+                if (!commandName) {
+                    Logger.warn(`[CMD] Commande ignorée : ajouter "name" ou "data.name".\n Fichier -> ${file}`);
                     continue;
                 }
+
+                // Définir cmd.name pour compatibilité
+                if (!cmd.name && cmd.data?.name) {
+                    cmd.name = cmd.data.name;
+                }
+
+                // Support pour cmd.data.description
+                const commandDescription = cmd.description || cmd.data?.description;
 
                 // Validation du type
                 const isContextMenu =
                     cmd.type === ApplicationCommandType.User ||
                     cmd.type === ApplicationCommandType.Message;
 
-                const isSlash = cmd.type === ApplicationCommandType.ChatInput;
+                const isSlash = cmd.type === ApplicationCommandType.ChatInput || cmd.data;
 
                 // Gestion des descriptions
                 if (isSlash) {
-                    if (!cmd.description) {
+                    if (!commandDescription) {
                         Logger.warn(`[CMD] Commande Slash ignorée : ajouter "description".\n Fichier -> ${file}`);
                         continue;
                     }
                 } else if (isContextMenu) {
-                    if (cmd.description) {
+                    if (commandDescription) {
                         Logger.warn(
-                            `[CMD] Le context menu "${cmd.name}" ne doit PAS avoir de "description". Elle a été supprimée.`
+                            `[CMD] Le context menu "${commandName}" ne doit PAS avoir de "description". Elle a été supprimée.`
                         );
                         delete cmd.description;
                     }
@@ -49,21 +60,21 @@ module.exports = async (client) => {
                     typeof cmd.execute !== "function" && 
                     typeof cmd.runInteraction !== "function" &&
                     typeof cmd.run !== "function") {
-                    Logger.warn(`[CMD] Commande "${cmd.name}" ignorée : ajouter "runSlash", "execute", "runInteraction" ou "run".\n Fichier -> ${file}`);
+                    Logger.warn(`[CMD] Commande "${commandName}" ignorée : ajouter "runSlash", "execute", "runInteraction" ou "run".\n Fichier -> ${file}`);
                     continue;
                 }
 
                 // Enregistrement de la commande
-                client.commands.set(cmd.name, cmd);
+                client.commands.set(commandName, cmd);
 
                 // Gestion des alias (pour prefix commands)
                 if (cmd.aliases && Array.isArray(cmd.aliases)) {
                     cmd.aliases.forEach((alias) => {
-                        client.aliases.set(alias, cmd.name);
+                        client.aliases.set(alias, commandName);
                     });
                 }
 
-                Logger.command(`- ${cmd.name}`);
+                Logger.command(`- ${commandName}`);
             } catch (err) {
                 Logger.error(`[CMD] Erreur lors du chargement : ${file}`);
                 console.error(err);

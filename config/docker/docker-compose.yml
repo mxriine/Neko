@@ -6,10 +6,10 @@ services:
     restart: unless-stopped
     environment:
       POSTGRES_USER: ${DB_USER:-neko}
-      POSTGRES_PASSWORD: ${DB_PASSWORD:-nekopassword}
-      POSTGRES_DB: ${DB_NAME:-neko_db}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-neko_password}
+      POSTGRES_DB: ${DB_NAME:-nekodb}
     ports:
-      - "${DB_PORT:-5433}:5432"
+      - "${DB_PORT:-5432}:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     networks:
@@ -34,7 +34,12 @@ services:
         condition: service_healthy
     environment:
       NODE_ENV: production
-      DATABASE_URL: postgresql://${DB_USER:-neko}:${DB_PASSWORD:-nekopassword}@postgres:5432/${DB_NAME:-neko_db}?schema=public
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_USER: neko
+      DB_PASSWORD: neko_password
+      DB_NAME: nekodb
+      DATABASE_URL: postgresql://neko:neko_password@postgres:5432/nekodb?schema=public
     volumes:
       - ../../src:/app/src
       - ../../config:/app/config
@@ -42,7 +47,7 @@ services:
       - ../../logs:/app/logs
     networks:
       - neko-network
-    command: sh -c "npx prisma migrate deploy --schema=./config/prisma/schema.prisma > /dev/null 2>&1 && npm run dev"
+    command: sh -c "npx prisma migrate deploy --schema=./config/prisma/schema.prisma && npm run dev"
 
 volumes:
   postgres_data:

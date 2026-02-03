@@ -47,6 +47,44 @@ module.exports = {
         moderation: {
             enabled: true,
             maxWarnings: 3,
+            autoMod: {
+                // Anti-Spam
+                spam: {
+                    enabled: true,
+                    maxMessages: 5,           // Nombre max de messages
+                    timeWindow: 5000,         // Dans cette période (ms)
+                    muteTime: 300000,         // Durée du timeout (5 min)
+                    warnAfter: 2,             // Warn après X infractions
+                },
+                // Anti-Liens
+                links: {
+                    enabled: true,
+                    allowedDomains: ['discord.gg', 'discord.com'], // Domaines autorisés
+                    deleteMessage: true,
+                    warnUser: true,
+                },
+                // Anti-Mentions en masse
+                mentions: {
+                    enabled: true,
+                    maxMentions: 5,           // Max mentions par message
+                    deleteMessage: true,
+                    warnUser: true,
+                },
+                // Anti-CAPS
+                caps: {
+                    enabled: true,
+                    percentage: 70,           // % de CAPS max
+                    minLength: 10,            // Taille min du message
+                    deleteMessage: true,
+                },
+                // Mots interdits
+                badWords: {
+                    enabled: true,
+                    words: [],                // Liste de mots à bannir
+                    deleteMessage: true,
+                    warnUser: true,
+                },
+            },
         },
         tickets: {
             enabled: true,

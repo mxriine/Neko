@@ -14,22 +14,30 @@ module.exports = async (client) => {
                 delete require.cache[require.resolve(file)];
                 const selectMenu = require(file);
 
-                if (!selectMenu.name) {
+                // Support both formats: selectMenu.name and selectMenu.data.name
+                const selectName = selectMenu.name || selectMenu.data?.name;
+                if (!selectName) {
                     Logger.warn(
-                        `[SELECT] Menu ignoré : missing "name"\n Fichier -> ${file}`
+                        `[SELECT] Menu ignoré : missing "name" or "data.name"\n Fichier -> ${file}`
                     );
                     continue;
                 }
 
-                if (typeof selectMenu.runInteraction !== "function") {
+                // Support both formats: runInteraction and execute
+                const executeFunction = selectMenu.runInteraction || selectMenu.execute;
+                if (typeof executeFunction !== "function") {
                     Logger.warn(
-                        `[SELECT] Menu "${selectMenu.name}" ignoré : missing "runInteraction()" \n Fichier -> ${file}`
+                        `[SELECT] Menu "${selectName}" ignoré : missing "runInteraction()" or "execute()"\n Fichier -> ${file}`
                     );
                     continue;
                 }
 
-                client.selects.set(selectMenu.name, selectMenu);
-                Logger.select(`- ${selectMenu.name}`);
+                // Normalize to have both name and execute
+                if (!selectMenu.name) selectMenu.name = selectName;
+                if (!selectMenu.execute) selectMenu.execute = executeFunction;
+
+                client.selects.set(selectName, selectMenu);
+                Logger.select(`- ${selectName}`);
 
             } catch (err) {
                 Logger.error(`[SELECT] Erreur lors du chargement : ${file}`);

@@ -439,6 +439,79 @@
             display: flex;
             gap: 4px;
         }
+
+        .warning-card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 12px;
+            margin-bottom: 8px;
+        }
+
+        .warning-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+
+        .warning-id {
+            font-family: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace;
+            font-size: 11px;
+            color: var(--text-muted);
+        }
+
+        .warning-date {
+            font-size: 11px;
+            color: var(--text-muted);
+        }
+
+        .warning-reason {
+            font-size: 13px;
+            color: var(--text-primary);
+            margin-bottom: 4px;
+        }
+
+        .warning-moderator {
+            font-size: 12px;
+            color: var(--text-secondary);
+        }
+
+        .ticket-card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 12px;
+        }
+
+        .ticket-status {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 13px;
+            font-weight: 500;
+            margin-bottom: 8px;
+        }
+
+        .ticket-status.open {
+            color: var(--success);
+        }
+
+        .ticket-status.closed {
+            color: var(--text-muted);
+        }
+
+        .ticket-info {
+            font-size: 13px;
+            color: var(--text-primary);
+            margin-bottom: 4px;
+        }
+
+        .ticket-message-id {
+            font-family: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace;
+            font-size: 11px;
+            color: var(--text-muted);
+        }
     </style>
 </head>
 <body>
@@ -685,6 +758,63 @@
         </div>
     </div>
 
+    <!-- User Details Modal -->
+    <div id="viewUserModal" class="modal">
+        <div class="modal-content" style="max-width: 800px;">
+            <div class="modal-header">
+                <h2>User Details</h2>
+                <button class="modal-close" onclick="closeModal('viewUserModal')">×</button>
+            </div>
+            <div class="modal-body">
+                <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; margin-bottom: 24px;">
+                    <div class="form-group">
+                        <label>Discord ID</label>
+                        <input type="text" id="viewUserDiscordId" disabled>
+                    </div>
+                    <div class="form-group">
+                        <label>Username</label>
+                        <input type="text" id="viewUserName" disabled>
+                    </div>
+                    <div class="form-group">
+                        <label>Guild ID</label>
+                        <input type="text" id="viewUserGuildId" disabled>
+                    </div>
+                    <div class="form-group">
+                        <label>Created At</label>
+                        <input type="text" id="viewUserCreatedAt" disabled>
+                    </div>
+                    <div class="form-group">
+                        <label>Level</label>
+                        <input type="text" id="viewUserLevel" disabled>
+                    </div>
+                    <div class="form-group">
+                        <label>XP</label>
+                        <input type="text" id="viewUserXp" disabled>
+                    </div>
+                </div>
+
+                <h3 style="margin: 20px 0 12px 0; font-size: 14px; font-weight: 600; color: var(--text-secondary); border-bottom: 1px solid var(--border); padding-bottom: 8px;">Ticket</h3>
+                <div id="viewUserTicket" style="margin-bottom: 24px;">
+                    <div class="empty-state" style="padding: 24px;">
+                        <div class="empty-state-icon" style="font-size: 32px;">✓</div>
+                        <div>No active ticket</div>
+                    </div>
+                </div>
+
+                <h3 style="margin: 20px 0 12px 0; font-size: 14px; font-weight: 600; color: var(--text-secondary); border-bottom: 1px solid var(--border); padding-bottom: 8px;">Warnings (<span id="viewUserWarningsCount">0</span>)</h3>
+                <div id="viewUserWarnings" style="max-height: 300px; overflow-y: auto;">
+                    <div class="empty-state" style="padding: 24px;">
+                        <div class="empty-state-icon" style="font-size: 32px;">✓</div>
+                        <div>No warnings</div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal('viewUserModal')">Close</button>
+            </div>
+        </div>
+    </div>
+
     <script>
         let currentTab = 'guilds';
         let guildsData = [];
@@ -819,6 +949,7 @@
                                 <td><span class="mono">${new Date(user.createdAt).toLocaleString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</span></td>
                                 <td>
                                     <div class="actions">
+                                        <button class="btn btn-sm btn-primary" onclick='viewUser(${JSON.stringify(user)})'>View</button>
                                         <button class="btn btn-sm btn-primary" onclick='editUser(${JSON.stringify(user)})'>Edit</button>
                                         <button class="btn btn-sm btn-danger" onclick='deleteItem("user", "${user.discordId}", "${user.username}", "${user.guildId}")'>Delete</button>
                                     </div>
@@ -857,7 +988,7 @@
             document.getElementById('guildTicket').value = guild.ticketEnabled;
             
             document.getElementById('guildModLogChannel').value = guild.modLogChannel || '';
-            document.getElementById('guildModLog').value = guild.modLogEnabled;
+            document.getElementById('guildModLog').value = guild.modEnabled;
             
             openModal('editGuildModal');
         }
@@ -880,7 +1011,10 @@
                 ticketChannel: document.getElementById('guildTicketChannel').value || null,
                 ticketEnabled: document.getElementById('guildTicket').value === 'true',
                 modLogChannel: document.getElementById('guildModLogChannel').value || null,
-                modLogEnabled: document.getElementById('guildModLog').value === 'true'
+                modEnabled: document.getElementById('guildModLog').value === 'true',
+                autoModEnabled: document.getElementById('guildModLog').value === 'true',
+                antiSpam: document.getElementById('guildModLog').value === 'true',
+                antiLink: document.getElementById('guildModLog').value === 'true'
             };
 
             try {
@@ -901,6 +1035,77 @@
                 console.error('Error:', error);
                 alert('Failed to update guild');
             }
+        }
+
+        function viewUser(user) {
+            document.getElementById('viewUserDiscordId').value = user.discordId;
+            document.getElementById('viewUserName').value = user.username;
+            document.getElementById('viewUserGuildId').value = user.guildId;
+            document.getElementById('viewUserCreatedAt').value = new Date(user.createdAt).toLocaleString('en-GB', { 
+                day: '2-digit', 
+                month: '2-digit', 
+                year: 'numeric', 
+                hour: '2-digit', 
+                minute: '2-digit',
+                second: '2-digit'
+            });
+            document.getElementById('viewUserLevel').value = user.level;
+            document.getElementById('viewUserXp').value = user.xp.toLocaleString();
+            document.getElementById('viewUserWarningsCount').textContent = user.warnings.length;
+            
+            // Affichage du ticket
+            const ticketContainer = document.getElementById('viewUserTicket');
+            if (user.hasTicket && user.ticketMessageId) {
+                ticketContainer.innerHTML = `
+                    <div class="ticket-card">
+                        <div class="ticket-status open">
+                            <span>🎫</span>
+                            <span>Active Ticket</span>
+                        </div>
+                        <div class="ticket-info"><strong>Status:</strong> Open</div>
+                        ${user.ticketReason ? `<div class="ticket-info"><strong>Reason:</strong> ${user.ticketReason}</div>` : ''}
+                        <div class="ticket-message-id">Message ID: ${user.ticketMessageId}</div>
+                    </div>
+                `;
+            } else {
+                ticketContainer.innerHTML = `
+                    <div class="empty-state" style="padding: 24px;">
+                        <div class="empty-state-icon" style="font-size: 32px;">✓</div>
+                        <div>No active ticket</div>
+                    </div>
+                `;
+            }
+            
+            const warningsContainer = document.getElementById('viewUserWarnings');
+            
+            if (user.warnings.length === 0) {
+                warningsContainer.innerHTML = `
+                    <div class="empty-state" style="padding: 24px;">
+                        <div class="empty-state-icon" style="font-size: 32px;">✓</div>
+                        <div>No warnings</div>
+                    </div>
+                `;
+            } else {
+                const warningsHtml = user.warnings.map((warning, index) => `
+                    <div class="warning-card">
+                        <div class="warning-header">
+                            <span class="warning-id">#${index + 1} • ID: ${warning.id}</span>
+                            <span class="warning-date">${new Date(warning.createdAt).toLocaleString('en-GB', { 
+                                day: '2-digit', 
+                                month: '2-digit', 
+                                year: 'numeric', 
+                                hour: '2-digit', 
+                                minute: '2-digit'
+                            })}</span>
+                        </div>
+                        <div class="warning-reason"><strong>Reason:</strong> ${warning.reason}</div>
+                        <div class="warning-moderator"><strong>Moderator:</strong> ${warning.moderatorId}</div>
+                    </div>
+                `).join('');
+                warningsContainer.innerHTML = warningsHtml;
+            }
+            
+            openModal('viewUserModal');
         }
 
         function editUser(user) {
